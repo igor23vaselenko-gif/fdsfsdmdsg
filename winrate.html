@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif; 
+            font-size: 40px; 
+            font-weight: bold;
+            color: white; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8); 
+            margin: 0;
+            padding: 10px;
+        }
+        .win { color: #4CAF50; margin-right: 4px; } 
+        .loss { color: #F44336; margin-right: 4px; } 
+        .rate { color: #FFC107; } 
+    </style>
+</head>
+<body>
+
+    <div>
+        <span class="win" id="w">0</span>W - <span class="loss" id="l">0</span>L | WR: <span class="rate" id="wr">0%</span>
+    </div>
+    <script>
+        const apiKey = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiIsImtpZCI6IjI4YTMxOGY3LTAwMDAtYTFlYi03ZmExLTJjNzQzM2M2Y2NhNSJ9.eyJpc3MiOiJzdXBlcmNlbGwiLCJhdWQiOiJzdXBlcmNlbGw6Z2FtZWFwaSIsImp0aSI6IjE3NjI1YTA3LTU0NzQtNGRmYi1hYzM1LTg2MmY1YzMxYTU2YSIsImlhdCI6MTc3MzA4NzI4NSwic3ViIjoiZGV2ZWxvcGVyLzVkYjc1ZmMxLWE0Y2ItZGQ1OS00MDM2LTdhMjA3ODFkYmRjOSIsInNjb3BlcyI6WyJyb3lhbGUiXSwibGltaXRzIjpbeyJ0aWVyIjoiZGV2ZWxvcGVyL3NpbHZlciIsInR5cGUiOiJ0aHJvdHRsaW5nIn0seyJjaWRycyI6WyI0NS43OS4yMTguNzkiXSwidHlwZSI6ImNsaWVudCJ9XX0.CpRNPzqXw7L2eiDotJ7_lm3wA6oPFPGvytsnFS8ISjd0sAVXb074LKNo_yePdJOrFc4BenJDL6adxcRUAZS7hQ";
+        const playerTag = "202V80RJJP"; 
+
+        let baselineBattleTime = null; 
+        let wins = 0;
+        let losses = 0;
+        let processedBattles = new Set(); 
+
+        async function checkBattles() {
+            try {
+                const response = await fetch(`https://proxy.royaleapi.dev/v1/players/%23${playerTag}/battlelog`, {
+                    headers: { "Authorization": `Bearer ${apiKey}` }
+                });
+                const battles = await response.json();
+
+                if (!battles || battles.length === 0) return;
+
+                if (!baselineBattleTime) {
+                    baselineBattleTime = battles[0].battleTime;
+                    return;
+                }
+
+                for (const battle of battles) {
+                    if (battle.battleTime <= baselineBattleTime) break;
+                    
+                    if (processedBattles.has(battle.battleTime)) continue;
+
+                    const myCrowns = battle.team[0].crowns;
+                    const oppCrowns = battle.opponent[0].crowns;
+
+                    if (myCrowns > oppCrowns) {
+                        wins++;
+                    } else if (myCrowns < oppCrowns) {
+                        losses++;
+                    }
+
+                    processedBattles.add(battle.battleTime); // Записываем бой в посчитанные
+                }
+
+                updateScreen();
+            } catch (e) {
+                console.error("Ошибка загрузки данных", e);
+            }
+        }
+
+        function updateScreen() {
+            const total = wins + losses;
+            const winrate = total > 0 ? Math.round((wins / total) * 100) : 0;
+            
+            document.getElementById('w').innerText = wins;
+            document.getElementById('l').innerText = losses;
+            document.getElementById('wr').innerText = winrate + '%';
+        }
+
+        checkBattles();
+        setInterval(checkBattles, 60000);
+    </script>
+</body>
+</html>
